@@ -1,21 +1,21 @@
 """A generic iterator bolt wrapping a given boto service method."""
 import logging
 from types import MethodType
-from typing import Any, Callable, Dict, Iterator, Optional, Tuple, Union
+from typing import Any, Callable, Dict, Iterator, Optional, Union
 
 # From requirements.txt:
 from boto3.session import Session
 
 # From local modules:
 from ..type_hints import BoltItem, IteratorBolt, Result
-from ..utils import as_iterator, downcase_dict_keys, get_boto_method_kwargs_from_entries
+from ..utils import as_iterator, downcase_dict_keys
 
 
 CAMELCASED_SERVICES = ('batch',)
 LOGGER = logging.getLogger()
 
 
-def boto_method(ServiceName: str, MethodName: str, IteratingOver: Union[str, Tuple[str, ...]],
+def boto_method(ServiceName: str, MethodName: str,
                 Then: Optional[Callable[[Result], Union[Result, Iterator[Result]]]] = None, **boto_kwargs):
     """
     Configure an IteratorBolt factory to wrap a given boto service method.
@@ -52,10 +52,11 @@ def boto_method(ServiceName: str, MethodName: str, IteratingOver: Union[str, Tup
 
                 if not (hasattr(client, MethodName)
                         and isinstance(getattr(client, MethodName), MethodType)):
-                    raise ValueError('Boto client method \'%s.%s\' does not exist.' % (ServiceName, MethodName))
+                    raise ValueError('Boto client method \'%s.%s\' does not exist.'
+                                     % (ServiceName, MethodName))
 
                 try:
-                    kwargs = {**get_boto_method_kwargs_from_entries(IteratingOver, item), **method_kwargs}
+                    kwargs = {**method_kwargs, **item}
 
                     if ServiceName in CAMELCASED_SERVICES:
                         kwargs = downcase_dict_keys(kwargs)

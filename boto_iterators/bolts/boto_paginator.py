@@ -1,21 +1,21 @@
 """A generic iterator bolt wrapping a given boto service paginator."""
 import logging
 from types import MethodType
-from typing import Any, Callable, Dict, Iterator, Optional, Tuple, Union
+from typing import Any, Callable, Dict, Iterator, Optional, Union
 
 # From requirements.txt:
 from boto3.session import Session
 
 # From local modules:
 from ..type_hints import BoltItem, IteratorBolt, Result
-from ..utils import as_iterator, downcase_dict_keys, get_boto_method_kwargs_from_entries
+from ..utils import as_iterator, downcase_dict_keys
 
 
 CAMELCASED_SERVICES = ('batch',)
 LOGGER = logging.getLogger()
 
 
-def boto_paginator(ServiceName: str, MethodName: str, IteratingOver: Union[str, Tuple[str, ...]],
+def boto_paginator(ServiceName: str, MethodName: str,
                    Then: Optional[Callable[[Result], Union[Result, Iterator[Result]]]] = None, **boto_kwargs):
     """
     Configure an IteratorBolt factory to wrap a given boto service method.
@@ -55,7 +55,7 @@ def boto_paginator(ServiceName: str, MethodName: str, IteratingOver: Union[str, 
                     raise ValueError('Boto client method \'%s.%s\' does not exist.' % (ServiceName, MethodName))
 
                 try:
-                    kwargs = {**method_kwargs, **get_boto_method_kwargs_from_entries(IteratingOver, item)}
+                    kwargs = {**method_kwargs, **item}
 
                     if ServiceName in CAMELCASED_SERVICES:
                         kwargs = downcase_dict_keys(kwargs)
@@ -67,7 +67,7 @@ def boto_paginator(ServiceName: str, MethodName: str, IteratingOver: Union[str, 
                             yield ret, (*prev, ret)
 
                 except Exception as err:  # pylint: disable=broad-except
-                    LOGGER.error('An unhandled exception has occured executing boto method \'%s.%s\'.',
+                    LOGGER.error('An unhandled exception has occured executing boto paginator \'%s.%s\'.',
                                  ServiceName, MethodName,
                                  extra={'methodKwargs': kwargs,
                                         'error': type(err).__name__,

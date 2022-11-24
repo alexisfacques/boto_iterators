@@ -15,20 +15,18 @@ LOGGER = logging.getLogger()
 
 def transform(Parser: Union[Callable[[Result], Optional[Union[Result, Iterator[Result]]]],
                             Callable[[Result, PreviousResults], Optional[Union[Result, Iterator[Result]]]],
-                            Callable[[Result, PreviousResults, Session], Optional[Union[Result, Iterator[Result]]]]],
-              IgnoreErrors: bool = False) -> IteratorBolt:
+                            Callable[[Result, PreviousResults, Session], Optional[Union[Result, Iterator[Result]]]]]) \
+            -> IteratorBolt:
     """
-    Configure a Chain bolt that yields the output of the 'parser' function.
+    Configure a Chain bolt that yields the output of the 'Parser' function.
 
     Function factory.
-    :param parser:        a function that takes the bolt input as argument,
-                          and return a transformed result. This result is yield
-                          by the Iterator Chain bolt.
-    :param ignore_errors: whether or not the Iterator should hard-fail on
-                          unhandled exceptions.
 
-    :return:              an Iterator Chain bolt reading anything and
-                          yielding the transformed result of 'parser'.
+    :param Parser: a function that takes the bolt input as argument,
+                   and return a transformed result. This result is yield
+                   by the Iterator Chain.
+
+    :return: an Iterator Chain bolt reading anything and yielding the transformed result of 'parser'.
     """
     def bolt(BoltItems: Iterator[BoltItem], BotoSession: Session = Session()) -> Iterator[BoltItem]:
         """
@@ -55,9 +53,7 @@ def transform(Parser: Union[Callable[[Result], Optional[Union[Result, Iterator[R
                 LOGGER.exception('An unhandled exception occured within the transformation function.',
                                  extra={'error': type(err).__name__, 'errorDetail': str(err),
                                         'item': item})
-                if not IgnoreErrors:
-                    raise RuntimeError('An unhandled exception occured within the transformation function.') from err
 
-                continue
+                raise RuntimeError('An unhandled exception occured within the transformation function.') from err
 
     return bolt
