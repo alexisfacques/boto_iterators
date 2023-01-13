@@ -1,13 +1,13 @@
 """A generic iterator bolt wrapping a given boto service paginator."""
 import logging
 from types import MethodType
-from typing import Any, Callable, Dict, Iterator, Optional, Union
+from typing import Callable, Iterator, Optional, Union
 
 # From requirements.txt:
 from boto3.session import Session
 
 # From local modules:
-from ..type_hints import BoltItem, IteratorBolt, Result
+from ..type_hints import BoltItem, IteratorBolt
 from ..utils import as_iterator, downcase_dict_keys
 
 
@@ -16,7 +16,7 @@ LOGGER = logging.getLogger()
 
 
 def boto_paginator(ServiceName: str, MethodName: str,
-                   Then: Optional[Callable[[Result], Union[Result, Iterator[Result]]]] = None, **boto_kwargs):
+                   Then: Optional[Callable[[BoltItem], Union[BoltItem, Iterator[BoltItem]]]] = None, **boto_kwargs):
     """
     Configure an IteratorBolt factory to wrap a given boto service method.
 
@@ -39,15 +39,14 @@ def boto_paginator(ServiceName: str, MethodName: str,
             """
             Iterate over BoltItems and execute a given boto service method with a given boto Session.
 
-            :param BoltItems: iteration items, representing the the arguments values that are iterable, and results
-                              from the previous bolts (accessible with the transform bolt).
+            :param BoltItems: iteration items.
             :param BotoSession: an optional boto Session.
 
             :return: the result of the boto operation.
             """
             items_count: int = 0
 
-            for item, prev in BoltItems:
+            for item in BoltItems:
                 client = BotoSession.client(ServiceName, **boto_kwargs)  # type: ignore
 
                 if not (hasattr(client, MethodName)
@@ -63,15 +62,12 @@ def boto_paginator(ServiceName: str, MethodName: str,
                     for page in client.get_paginator(MethodName).paginate(**kwargs):
                         for page_item in as_iterator(page if Then is None else Then(page)):
                             items_count += 1
-                            ret: Dict[str, Any] = {**kwargs, **page_item}
-                            yield ret, (*prev, ret)
+                            yield {**kwargs, **page_item}
 
                 except Exception as err:  # pylint: disable=broad-except
                     LOGGER.error('An unhandled exception has occured executing boto paginator \'%s.%s\'.',
                                  ServiceName, MethodName,
-                                 extra={'methodKwargs': kwargs,
-                                        'error': type(err).__name__,
-                                        'errorDetail': str(err)})
+                                 extra={'methodKwargs': kwargs, 'error': type(err).__name__, 'errorDetail': str(err)})
 
             LOGGER.info('Successfully \'%s\' %d item(s) in %s.', MethodName, items_count, ServiceName)
 

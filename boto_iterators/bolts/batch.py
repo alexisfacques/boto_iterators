@@ -1,13 +1,9 @@
 """A generic bolt to transform the output of other bolts."""
 from itertools import islice
-import logging
 from typing import Iterator, Tuple
 
 # From local modules:
-from ..type_hints import BoltItem, IteratorBolt, Result
-
-
-LOGGER = logging.getLogger()
+from ..type_hints import BoltItem, IteratorBolt
 
 
 def batch(BatchSize: int) -> IteratorBolt:
@@ -31,9 +27,9 @@ def batch(BatchSize: int) -> IteratorBolt:
         :return: an enumeration of the results of the 'parser' function.
         """
         while True:
-            batched_records: Tuple[Result, ...] = tuple(islice((item for item, prev in BoltItems), BatchSize))
+            batched_records: Tuple[BoltItem, ...] = tuple(islice(BoltItems, BatchSize))
             if not batched_records:
                 return
-            yield ({'Records': batched_records}, tuple())
+            yield {'Records': batched_records}
 
     return bolt

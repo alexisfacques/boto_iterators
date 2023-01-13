@@ -7,7 +7,7 @@ import boto3
 
 # From local modules:
 from .boto_method import boto_method
-from ..type_hints import BoltItem, IteratorBolt, Result
+from ..type_hints import BoltItem, IteratorBolt
 
 
 LOGGER = logging.getLogger()
@@ -22,27 +22,26 @@ def boto_assume_role(IteratorChain: Tuple[IteratorBolt, ...], **method_kwargs) -
 
     :return: an IteratorBolt.
     """
-    def execute_iterator_bolts(CredentialsResult: Result) -> Iterator[Result]:
+    def execute_iterator_bolts(CredentialsBoltItem: BoltItem) -> Iterator[BoltItem]:
         """
-        :param CredentialsResult: the result of the sts.assume_role method.
+        :param CredentialsBoltItem: the result of the sts.assume_role method.
 
         :return: the result of execution of the IteratorChain, having used the boto session.
         """
         nested_session: boto3.session.Session = boto3.session.Session(**{
-            'aws_access_key_id': CredentialsResult['Credentials']['AccessKeyId'],
-            'aws_secret_access_key': CredentialsResult['Credentials']['SecretAccessKey'],
-            'aws_session_token': CredentialsResult['Credentials']['SessionToken']
+            'aws_access_key_id': CredentialsBoltItem['Credentials']['AccessKeyId'],
+            'aws_secret_access_key': CredentialsBoltItem['Credentials']['SecretAccessKey'],
+            'aws_session_token': CredentialsBoltItem['Credentials']['SessionToken']
         })
 
-        generator: Iterator[BoltItem] = iter(((CredentialsResult, tuple()),))
+        generator: Iterator[BoltItem] = iter((CredentialsBoltItem,))
 
         LOGGER.debug('Assembling \'boto.assume_role\' iterator chain.')
 
         for bolt in IteratorChain:
             generator = bolt(generator, nested_session)
 
-        for item, _ in generator:
-            yield item
+        return generator
 
     return boto_method(ServiceName='sts', MethodName='assume_role', IteratingOver='RoleArn',
                        Then=execute_iterator_bolts)(**method_kwargs)

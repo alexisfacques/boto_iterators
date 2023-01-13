@@ -4,10 +4,7 @@ from typing import Any, Callable, Dict, Iterator, Optional, Tuple, Union
 # From requirements.txt:
 import boto3
 
-Result = Dict[str, Any]
-PreviousResults = Tuple[Dict[str, Any], ...]
-BoltItem = Tuple[Result, PreviousResults]
-
+BoltItem = Dict[str, Any]
 IteratorBolt = Callable[[Iterator[BoltItem], boto3.session.Session], Iterator[BoltItem]]
 
 ChainResolver = Callable[[int], Dict[str, Any]]
